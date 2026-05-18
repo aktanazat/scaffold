@@ -11,23 +11,24 @@ import type {
 } from "@/lib/types";
 import { decodeAssignment, toStudentAssignment } from "@/lib/share";
 import { DEMO_STUDENT } from "@/lib/demoStudent";
+import { newSessionId, recordTurn } from "@/lib/sessionStore";
+import { Nav } from "@/components/Nav";
 
 export const dynamic = "force-dynamic";
 
-const STRUGGLE: Record<StruggleKind, { label: string; tone: string }> = {
-  asked_for_answer: { label: "Asked for the answer", tone: "var(--bad)" },
-  syntax: { label: "Syntax", tone: "var(--warn)" },
-  logic: { label: "Logic", tone: "var(--warn)" },
-  concept_gap: { label: "Concept gap", tone: "var(--bad)" },
-  stuck_no_attempt: { label: "Not attempting", tone: "var(--warn)" },
-  progressing: { label: "Progressing", tone: "var(--good)" },
+const TONE: Record<StruggleKind, { label: string; color: string }> = {
+  asked_for_answer: { label: "Asked for the answer", color: "var(--rust)" },
+  concept_gap: { label: "Concept gap", color: "var(--rust)" },
+  logic: { label: "Logic", color: "var(--clay)" },
+  syntax: { label: "Syntax", color: "var(--clay)" },
+  stuck_no_attempt: { label: "Not attempting", color: "var(--clay)" },
+  progressing: { label: "Progressing", color: "var(--sage)" },
 };
 
 interface Turn {
   kind: StruggleKind;
   concept: string | null;
   withheld: boolean;
-  at: number;
 }
 
 function TutorView() {
@@ -40,6 +41,11 @@ function TutorView() {
     const full = decodeAssignment(token);
     return full ? toStudentAssignment(full) : null;
   }, [sp]);
+
+  const session = useMemo(
+    () => ({ id: newSessionId(), student: "You", title: assignment?.title ?? "" }),
+    [assignment],
+  );
 
   const [code, setCode] = useState("");
   const [input, setInput] = useState("");
@@ -54,7 +60,7 @@ function TutorView() {
     setMessages([
       {
         role: "tutor",
-        content: `I'm your tutor for "${assignment.title}". Tell me your plan, or paste what you've tried. I won't write the solution for you, but I'll get you unstuck.`,
+        content: `I'm your tutor for "${assignment.title}". Tell me your plan, or paste what you have. I won't write it for you, but I'll get you unstuck.`,
       },
     ]);
   }, [assignment]);
@@ -65,15 +71,18 @@ function TutorView() {
 
   if (!assignment) {
     return (
-      <main className="mx-auto max-w-[560px] px-6 py-28 text-center">
-        <h1 className="text-[22px] font-semibold">No assignment in this link.</h1>
-        <p className="mt-3 text-[14px] text-[var(--text-dim)]">
-          Ask your teacher for the link, or try the demo.
-        </p>
-        <Link href="/tutor?demo=1" className="btn mt-7 inline-block">
-          Open the FizzBuzz demo
-        </Link>
-      </main>
+      <div className="min-h-screen">
+        <Nav active="demo" />
+        <main className="mx-auto max-w-[480px] px-6 pt-48 text-center">
+          <h1 className="serif text-[30px]">No assignment in this link.</h1>
+          <p className="mt-4 text-[14px] text-[var(--muted)]">
+            Ask your teacher for the link, or open the demo.
+          </p>
+          <Link href="/tutor?demo=1" className="btn mt-8 inline-block">
+            Open the FizzBuzz demo
+          </Link>
+        </main>
+      </div>
     );
   }
 
@@ -93,190 +102,149 @@ function TutorView() {
       const data = (await res.json()) as TutorResponse;
       setMode(data.mode);
       setMessages((m) => [...m, { role: "tutor", content: data.reply }]);
-      setTurns((t) => [
-        ...t,
-        { kind: data.struggle, concept: data.concept, withheld: data.withheldSolution, at: Date.now() },
-      ]);
+      const t: Turn = { kind: data.struggle, concept: data.concept, withheld: data.withheldSolution };
+      setTurns((x) => [...x, t]);
+      recordTurn(session, t);
     } catch {
-      setMessages((m) => [
-        ...m,
-        { role: "tutor", content: "I lost that one. Say it again?" },
-      ]);
+      setMessages((m) => [...m, { role: "tutor", content: "I lost that one. Say it again?" }]);
     } finally {
       setBusy(false);
     }
   }
 
-  const withheldCount = turns.filter((t) => t.withheld).length;
+  const withheld = turns.filter((t) => t.withheld).length;
   const conceptState = assignment.concepts.map((c) => {
-    const hits = turns.filter((t) => t.concept === c);
-    const last = hits[hits.length - 1];
-    const status = !last
-      ? "untouched"
-      : last.kind === "progressing"
-        ? "progressing"
-        : "shaky";
+    const last = [...turns].reverse().find((t) => t.concept === c);
+    const status = !last ? "untouched" : last.kind === "progressing" ? "steady" : "shaky";
     return { c, status };
   });
 
   return (
-    <main className="mx-auto grid h-screen w-full max-w-[1280px] grid-rows-[auto_1fr] gap-4 px-5 py-5">
-      <header className="flex items-center justify-between">
-        <div className="flex items-baseline gap-3">
-          <Link href="/" className="text-[16px] font-semibold tracking-tight">
-            Scaffold
-          </Link>
-          <span className="label">{assignment.title}</span>
+    <div className="h-screen">
+      <Nav active="demo" />
+      <main className="mx-auto grid h-screen max-w-[1240px] grid-rows-[88px_1fr] px-6">
+        <div className="flex items-end justify-between pb-4">
+          <div>
+            <p className="micro">Assignment</p>
+            <h1 className="serif mt-1 text-[22px] leading-none">{assignment.title}</h1>
+          </div>
+          <div className="flex items-center gap-5 text-[var(--faint)]">
+            {mode && <span className="micro">{mode === "live" ? "Live model" : "Demo engine"}</span>}
+            <span className="micro">{assignment.language}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {mode && (
-            <span className="label" style={{ color: "var(--text-dim)" }}>
-              {mode === "live" ? "Live model" : "Demo engine"}
-            </span>
-          )}
-          <span className="label">{assignment.language}</span>
-        </div>
-      </header>
 
-      <div className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-[1fr_1.05fr_300px]">
-        <section className="panel flex min-h-0 flex-col p-5">
-          <div className="label mb-3">Problem</div>
-          <p className="mb-5 text-[14px] leading-relaxed text-[var(--text-dim)]">
-            {assignment.prompt}
-          </p>
-          <div className="label mb-2">
-            Your code · the tutor reads this, it doesn&apos;t run it
-          </div>
-          <textarea
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            spellCheck={false}
-            placeholder={`# write ${assignment.language} here`}
-            className="field mono min-h-0 flex-1 resize-none text-[13px] leading-relaxed"
-          />
-        </section>
+        <div className="grid min-h-0 grid-cols-1 gap-0 border-t border-[var(--hairline)] lg:grid-cols-[1fr_1.05fr_280px]">
+          <section className="flex min-h-0 flex-col py-6 lg:pr-8">
+            <p className="micro mb-3">Problem</p>
+            <p className="mb-7 text-[14px] leading-[1.7] text-[var(--muted)]">
+              {assignment.prompt}
+            </p>
+            <p className="micro mb-3">
+              Your code <span className="normal-case tracking-normal text-[var(--faint)]">— the tutor reads it, it doesn&apos;t run it</span>
+            </p>
+            <textarea
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              spellCheck={false}
+              placeholder={`# ${assignment.language}`}
+              className="code-field min-h-0 flex-1 resize-none"
+            />
+          </section>
 
-        <section className="panel flex min-h-0 flex-col">
-          <div className="label border-b border-[var(--line-soft)] px-5 py-3">
-            Tutor
-          </div>
-          <div ref={scroller} className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={`rise max-w-[88%] ${m.role === "student" ? "ml-auto" : ""}`}
-              >
-                <div
-                  className="label mb-1"
-                  style={{ color: m.role === "tutor" ? "var(--accent)" : "var(--text-faint)" }}
-                >
-                  {m.role === "tutor" ? "Tutor" : "You"}
+          <section className="flex min-h-0 flex-col border-[var(--hairline)] py-6 lg:border-x lg:px-8">
+            <p className="micro mb-4">Tutor</p>
+            <div ref={scroller} className="flex-1 space-y-6 overflow-y-auto pr-1">
+              {messages.map((m, i) => (
+                <div key={i} className={`fade-up ${m.role === "student" ? "flex justify-end" : ""}`}>
+                  {m.role === "tutor" ? (
+                    <p className="max-w-[92%] text-[14.5px] leading-[1.75] text-[var(--ink)]">
+                      {m.content}
+                    </p>
+                  ) : (
+                    <p className="max-w-[80%] rounded-2xl border border-[var(--hairline)] bg-[var(--raised)] px-4 py-2.5 text-[14px] leading-[1.6] text-[var(--muted)]">
+                      {m.content}
+                    </p>
+                  )}
                 </div>
-                <div
-                  className="rounded-[9px] px-3.5 py-2.5 text-[14px] leading-relaxed"
-                  style={{
-                    background: m.role === "student" ? "var(--panel-2)" : "transparent",
-                    border:
-                      m.role === "student"
-                        ? "1px solid var(--line)"
-                        : "1px solid var(--line-soft)",
-                  }}
-                >
-                  {m.content}
-                </div>
-              </div>
-            ))}
-            {busy && (
-              <div className="thinking label" style={{ color: "var(--accent)" }}>
-                Tutor is thinking
-              </div>
-            )}
-          </div>
-          <div className="border-t border-[var(--line-soft)] p-3">
-            <div className="flex gap-2">
+              ))}
+              {busy && <p className="breathe text-[14px] text-[var(--faint)]">thinking</p>}
+            </div>
+            <div className="mt-5 flex items-end gap-3 border-t border-[var(--hairline)] pt-4">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send();
                 }}
-                placeholder="Ask, or describe what you tried…  (⌘/Ctrl+Enter)"
-                className="field min-h-[52px] resize-none text-[14px]"
+                placeholder="Describe what you tried…  ⌘↵"
+                className="field min-h-[44px] resize-none"
               />
               <button className="btn" onClick={send} disabled={busy || !input.trim()}>
                 Send
               </button>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="panel flex min-h-0 flex-col p-5">
-          <div className="label mb-4">Where you stand</div>
+          <section className="flex min-h-0 flex-col py-6 lg:pl-8">
+            <p className="micro mb-5">Where you stand</p>
 
-          <div className="label mb-2" style={{ color: "var(--text-faint)" }}>
-            Target concepts
-          </div>
-          <div className="mb-6 space-y-2">
-            {conceptState.map(({ c, status }) => (
-              <div key={c} className="flex items-center justify-between gap-3">
-                <span className="text-[13px] text-[var(--text-dim)]">{c}</span>
-                <span
-                  className="label"
-                  style={{
-                    color:
-                      status === "progressing"
-                        ? "var(--good)"
-                        : status === "shaky"
-                          ? "var(--warn)"
-                          : "var(--text-faint)",
-                  }}
+            <p className="micro mb-3 text-[var(--faint)]">Concepts</p>
+            <div className="mb-9 space-y-3">
+              {conceptState.map(({ c, status }) => (
+                <div key={c} className="flex items-baseline justify-between gap-3">
+                  <span className="text-[13.5px] text-[var(--muted)]">{c}</span>
+                  <span
+                    className="text-[11px]"
+                    style={{
+                      color:
+                        status === "steady"
+                          ? "var(--sage)"
+                          : status === "shaky"
+                            ? "var(--clay)"
+                            : "var(--faint)",
+                    }}
+                  >
+                    {status}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <p className="micro mb-3 text-[var(--faint)]">Struggle timeline</p>
+            <div className="flex-1 space-y-2.5 overflow-y-auto">
+              {turns.length === 0 && (
+                <p className="text-[13px] leading-relaxed text-[var(--faint)]">
+                  Fills in as you work. This is the read your teacher gets.
+                </p>
+              )}
+              {turns.map((t, i) => (
+                <div
+                  key={i}
+                  className="border-l-2 pl-3 text-[13px] text-[var(--muted)]"
+                  style={{ borderColor: TONE[t.kind].color }}
                 >
-                  {status}
-                </span>
-              </div>
-            ))}
-          </div>
+                  {TONE[t.kind].label}
+                </div>
+              ))}
+            </div>
 
-          <div className="label mb-2" style={{ color: "var(--text-faint)" }}>
-            Struggle timeline
-          </div>
-          <div className="flex-1 space-y-2 overflow-y-auto">
-            {turns.length === 0 && (
-              <p className="text-[13px] leading-relaxed text-[var(--text-faint)]">
-                Fills in as you work. This is the read your teacher gets.
+            {withheld > 0 && (
+              <p className="mt-5 border-t border-[var(--hairline)] pt-4 text-[12px] leading-relaxed text-[var(--faint)]">
+                Solution withheld {withheld}×. The tutor redirected instead of
+                handing it over.
               </p>
             )}
-            {turns.map((t, i) => (
-              <div key={i} className="flex items-center gap-2.5">
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: STRUGGLE[t.kind].tone }}
-                />
-                <span className="text-[13px] text-[var(--text-dim)]">
-                  {STRUGGLE[t.kind].label}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {withheldCount > 0 && (
-            <div
-              className="mt-4 rounded-[8px] px-3 py-2 text-[12px] leading-relaxed"
-              style={{ border: "1px solid var(--line)", color: "var(--text-faint)" }}
-            >
-              Solution withheld {withheldCount}×. The tutor redirected instead of
-              handing it over.
-            </div>
-          )}
-        </section>
-      </div>
-    </main>
+          </section>
+        </div>
+      </main>
+    </div>
   );
 }
 
 export default function TutorPage() {
   return (
-    <Suspense fallback={<div className="p-10 text-[var(--text-faint)]">Loading…</div>}>
+    <Suspense fallback={<div className="p-16 text-[var(--faint)]">Loading…</div>}>
       <TutorView />
     </Suspense>
   );

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Language } from "@/lib/types";
 import { encodeAssignment } from "@/lib/share";
+import { Nav } from "@/components/Nav";
 
 const LANGS: { id: Language; label: string }[] = [
   { id: "python", label: "Python" },
@@ -20,7 +21,7 @@ export default function TeacherPage() {
   const [concepts, setConcepts] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const ready = title.trim() && prompt.trim() && reference.trim();
+  const ready = Boolean(title.trim() && prompt.trim() && reference.trim());
 
   const link = useMemo(() => {
     if (!ready) return "";
@@ -29,65 +30,62 @@ export default function TeacherPage() {
       language,
       prompt: prompt.trim(),
       reference: reference.trim(),
-      concepts: concepts
-        .split(",")
-        .map((c) => c.trim())
-        .filter(Boolean),
+      concepts: concepts.split(",").map((c) => c.trim()).filter(Boolean),
     });
     const origin = typeof window === "undefined" ? "" : window.location.origin;
     return `${origin}/tutor?a=${token}`;
   }, [ready, title, language, prompt, reference, concepts]);
 
   return (
-    <main className="mx-auto w-full max-w-[1080px] px-6 py-10">
-      <header className="flex items-center justify-between">
-        <div className="flex items-baseline gap-3">
-          <span className="text-[20px] font-semibold tracking-tight">Scaffold</span>
-          <span className="label hidden sm:block">AI tutoring for CS classrooms</span>
-        </div>
-        <Link href="/tutor?demo=1" className="btn-ghost">
-          Open the live demo →
-        </Link>
-      </header>
+    <div className="min-h-screen">
+      <Nav active="compose" />
 
-      <section className="mt-16 max-w-[680px] rise">
-        <h1 className="text-[40px] leading-[1.08] font-semibold tracking-tight">
-          The AI tutor that refuses to do the homework.
-        </h1>
-        <p className="mt-5 text-[16px] leading-relaxed text-[var(--text-dim)]">
-          Every student now has an AI that hands them the answer. Scaffold is the
-          one a teacher hands them instead. Paste an assignment and its solution;
-          you get a link. Students get Socratic hints that never spell out the
-          code, and you see exactly where each one got stuck.
-        </p>
-      </section>
+      <main className="mx-auto w-full max-w-[920px] px-6">
+        <section className="pt-32 pb-20 fade-up">
+          <p className="micro mb-7">Scaffold · AI tutoring for CS classrooms</p>
+          <h1 className="serif text-[clamp(2.6rem,6vw,4.4rem)] leading-[1.04] max-w-[16ch]">
+            The AI tutor that refuses to do the homework.
+          </h1>
+          <p className="mt-9 max-w-[54ch] text-[16px] leading-[1.7] text-[var(--muted)]">
+            Every student already has an AI that hands them the answer. This is
+            the one a teacher hands them instead. Paste an assignment and its
+            solution. You get a link. Students get hints that never spell out the
+            code, and you see exactly where each one got stuck.
+          </p>
+        </section>
 
-      <section className="mt-12 grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="panel p-6 rise">
-          <div className="label mb-5">Compose an assignment</div>
+        <hr className="rule" />
 
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <label className="label">Title</label>
+        <section className="grid gap-x-16 gap-y-10 py-16 md:grid-cols-[180px_1fr]">
+          <div>
+            <h2 className="serif text-[26px] leading-tight">Compose</h2>
+            <p className="mt-3 text-[13.5px] leading-relaxed text-[var(--muted)]">
+              No account. No database. The link is the whole product.
+            </p>
+          </div>
+
+          <div className="space-y-9">
+            <label className="block">
+              <span className="micro">Title</span>
               <input
-                className="field"
-                placeholder="Two Sum, week 4"
+                className="field mt-3"
+                placeholder="Two Sum — week 4 lab"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
-            </div>
+            </label>
 
-            <div className="grid gap-2">
-              <label className="label">Language</label>
-              <div className="flex flex-wrap gap-2">
+            <div>
+              <span className="micro">Language</span>
+              <div className="mt-4 flex flex-wrap gap-2">
                 {LANGS.map((l) => (
                   <button
                     key={l.id}
                     onClick={() => setLanguage(l.id)}
-                    className="btn-ghost"
+                    className="btn-quiet"
                     style={
                       language === l.id
-                        ? { borderColor: "var(--accent)", color: "var(--text)" }
+                        ? { borderColor: "var(--ink)", background: "var(--ink)", color: "var(--paper)" }
                         : undefined
                     }
                   >
@@ -97,107 +95,100 @@ export default function TeacherPage() {
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <label className="label">Problem the student sees</label>
+            <label className="block">
+              <span className="micro">Problem the student sees</span>
               <textarea
-                className="field min-h-[110px] resize-y leading-relaxed"
-                placeholder="Given an array of integers, return indices of the two numbers that add up to a target."
+                className="field mt-3 min-h-[76px] resize-y leading-relaxed"
+                placeholder="Return the indices of the two numbers that add up to the target."
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
               />
-            </div>
+            </label>
 
-            <div className="grid gap-2">
-              <label className="label">
-                Reference solution — server-side only, never sent to the student
-              </label>
+            <label className="block">
+              <span className="micro">Reference solution</span>
+              <span className="ml-2 text-[11px] text-[var(--faint)]">
+                server-side only · never sent to the student
+              </span>
               <textarea
-                className="field mono min-h-[120px] resize-y text-[13px] leading-relaxed"
-                placeholder={"def two_sum(nums, target):\n    ..."}
+                className="code-field mt-3 min-h-[120px] resize-y"
+                placeholder={"def two_sum(nums, target):\n    seen = {}"}
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
               />
-            </div>
+            </label>
 
-            <div className="grid gap-2">
-              <label className="label">Target concepts — comma separated</label>
+            <label className="block">
+              <span className="micro">Target concepts</span>
               <input
-                className="field"
+                className="field mt-3"
                 placeholder="hash maps, complement search, single pass"
                 value={concepts}
                 onChange={(e) => setConcepts(e.target.value)}
               />
+            </label>
+
+            <div className="pt-2">
+              {ready ? (
+                <div className="fade-up">
+                  <span className="micro">Shareable student link</span>
+                  <div className="mono mt-3 break-all border-b border-[var(--hairline)] pb-3 text-[12.5px] text-[var(--muted)]">
+                    {link}
+                  </div>
+                  <div className="mt-5 flex items-center gap-3">
+                    <button
+                      className="btn"
+                      onClick={() => {
+                        navigator.clipboard.writeText(link);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1600);
+                      }}
+                    >
+                      {copied ? "Copied" : "Copy link"}
+                    </button>
+                    <a className="btn-quiet" href={link} target="_blank" rel="noreferrer">
+                      Open as student
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[13.5px] text-[var(--faint)]">
+                  Fill in a title, the problem, and a reference solution. The
+                  link generates the moment it is valid.{" "}
+                  <Link href="/tutor?demo=1" className="text-[var(--ink)] underline underline-offset-4">
+                    Or skip to the FizzBuzz demo.
+                  </Link>
+                </p>
+              )}
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="panel flex flex-col p-6 rise">
-          <div className="label mb-5">Shareable student link</div>
+        <hr className="rule" />
 
-          {ready ? (
-            <div className="flex flex-1 flex-col">
-              <div className="panel mono break-all bg-[var(--panel-2)] p-3 text-[12px] leading-relaxed text-[var(--text-dim)]">
-                {link}
-              </div>
-              <div className="mt-4 flex gap-2">
-                <button
-                  className="btn flex-1"
-                  onClick={() => {
-                    navigator.clipboard.writeText(link);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 1600);
-                  }}
-                >
-                  {copied ? "Copied" : "Copy link"}
-                </button>
-                <a className="btn-ghost" href={link} target="_blank" rel="noreferrer">
-                  Preview
-                </a>
-              </div>
-              <p className="mt-5 text-[13px] leading-relaxed text-[var(--text-faint)]">
-                The solution is encoded for the server only. The student client
-                never receives it; the tutor reasons against it privately.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-1 flex-col justify-between">
-              <p className="text-[14px] leading-relaxed text-[var(--text-faint)]">
-                Fill in a title, the problem, and a reference solution. The link
-                generates instantly — no account, no database, nothing to host.
-              </p>
-              <Link href="/tutor?demo=1" className="btn-ghost mt-6 text-center">
-                Skip ahead — try the FizzBuzz demo
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="mt-12 grid gap-px overflow-hidden rounded-[10px] border border-[var(--line)] bg-[var(--line)] sm:grid-cols-3">
-        {[
-          {
-            k: "Who it's for",
-            v: "CS teachers and TAs who can't be in 30 places at once during a lab.",
-          },
-          {
-            k: "What it refuses",
-            v: "Writing the solution, pasting code over two lines, or revealing your reference.",
-          },
-          {
-            k: "What you get back",
-            v: "A live read of each student's struggle: syntax, logic, or a concept gap.",
-          },
-        ].map((c) => (
-          <div key={c.k} className="bg-[var(--panel)] p-6">
-            <div className="label mb-2">{c.k}</div>
-            <p className="text-[14px] leading-relaxed text-[var(--text-dim)]">{c.v}</p>
+        <section className="grid gap-x-16 gap-y-8 py-16 md:grid-cols-[180px_1fr]">
+          <h2 className="serif text-[26px] leading-tight">The idea</h2>
+          <div className="max-w-[60ch] space-y-5 text-[15px] leading-[1.75] text-[var(--muted)]">
+            <p>
+              The easy build is another chatbot that answers questions. The
+              interesting work is the answer it withholds. A tutor that hands
+              over the code teaches a student to wait for the next prompt; one
+              that refuses teaches them to read their own.
+            </p>
+            <p className="text-[var(--ink)]">
+              So Scaffold gives one nudge per turn, never more than two lines of
+              code, and never the reference. The part it sends back to you is
+              the part teaching has always been blind to: where the thinking
+              broke, not just whether the answer was right.
+            </p>
           </div>
-        ))}
-      </section>
+        </section>
 
-      <footer className="mt-14 text-[12px] text-[var(--text-faint)]">
-        Scaffold · built for the CodeHS Summer Intern Challenge
-      </footer>
-    </main>
+        <footer className="flex items-center justify-between py-12 text-[12px] text-[var(--faint)]">
+          <span>Scaffold</span>
+          <span>Built for the CodeHS 2026 Summer Intern Challenge</span>
+        </footer>
+      </main>
+    </div>
   );
 }

@@ -6,11 +6,13 @@ Every student now has an AI that hands them the answer. Scaffold is the one a te
 
 ## Try it
 
-One-click deploy (no config, no env vars; ships with a deterministic demo engine so the link works immediately):
+Live: **https://scaffold-mocha.vercel.app**
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/aktanazat/scaffold)
+- [Built-in FizzBuzz tutor session](https://scaffold-mocha.vercel.app/tutor?demo=1)
+- [Teacher class dashboard](https://scaffold-mocha.vercel.app/class)
+- Or compose your own assignment on the home page and share the generated link.
 
-Then open `/tutor?demo=1` for the built-in FizzBuzz session, or compose your own assignment on the home page.
+It ships with a deterministic demo engine, so the public link works with zero configuration.
 
 ## Run locally
 
