@@ -8,8 +8,8 @@ const ITEMS = [
 
 export function Nav({ active }: { active: "compose" | "demo" | "class" }) {
   return (
-    <header className="fixed inset-x-0 top-5 z-50 flex justify-center px-6">
-      <nav className="pill">
+    <header className="pointer-events-none fixed inset-x-0 top-5 z-50 flex justify-center px-6">
+      <nav className="pill pointer-events-auto">
         <Link href="/" className="serif text-[15px] tracking-tight text-[var(--ink)]">
           Scaffold
         </Link>
