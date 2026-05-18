@@ -68,15 +68,19 @@ function TutorView() {
   const [caption, setCaption] = useState<string | null>(null);
   const playRef = useRef(false);
   const scroller = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<ChatMessage[]>([]);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!assignment) return;
-    setMessages([
+    const greeting: ChatMessage[] = [
       {
         role: "tutor",
         content: `I'm your tutor for "${assignment.title}". Tell me your plan, or paste what you have. I won't write it for you, but I'll get you unstuck.`,
       },
-    ]);
+    ];
+    messagesRef.current = greeting;
+    setMessages(greeting);
   }, [assignment]);
 
   useEffect(() => {
@@ -86,25 +90,28 @@ function TutorView() {
   async function send(forced?: string): Promise<Turn | null> {
     const text = (forced ?? input).trim();
     if (!text || busy) return null;
-    const next: ChatMessage[] = [...messages, { role: "student", content: text }];
-    setMessages(next);
+    const convo: ChatMessage[] = [...messagesRef.current, { role: "student", content: text }];
+    messagesRef.current = convo;
+    setMessages(convo);
     setInput("");
     setBusy(true);
     try {
       const res = await fetch("/api/tutor", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ assignment, code, messages: next }),
+        body: JSON.stringify({ assignment, code, messages: convo }),
       });
       const data = (await res.json()) as TutorResponse;
       setMode(data.mode);
-      setMessages((m) => [...m, { role: "tutor", content: data.reply }]);
+      messagesRef.current = [...convo, { role: "tutor", content: data.reply }];
+      setMessages(messagesRef.current);
       const t: Turn = { kind: data.struggle, concept: data.concept, withheld: data.withheldSolution };
       setTurns((x) => [...x, t]);
       recordTurn(session, t);
       return t;
     } catch {
-      setMessages((m) => [...m, { role: "tutor", content: "I lost that one. Say it again?" }]);
+      messagesRef.current = [...convo, { role: "tutor", content: "I lost that one. Say it again?" }];
+      setMessages(messagesRef.current);
       return null;
     } finally {
       setBusy(false);
@@ -114,42 +121,52 @@ function TutorView() {
   async function play() {
     if (playRef.current || !DEMO_SCRIPT.length) return;
     playRef.current = true;
+    // instant feedback: the screen must change the moment they click
     setPlaying(true);
-    setMessages([]);
+    setCaption(DEMO_SCRIPT[0].caption);
+    const intro: ChatMessage[] = [
+      { role: "tutor", content: "Watching a student work through this live." },
+    ];
+    messagesRef.current = intro;
+    setMessages(intro);
     setTurns([]);
     setCode("");
     setInput("");
+    inputRef.current?.focus();
     let buffer = "";
     const alive = () => playRef.current;
-    await sleep(500);
-    for (const step of DEMO_SCRIPT) {
+    const wait = (ms: number) => sleep(Math.min(ms, 1100));
+    await sleep(260);
+    for (let s = 0; s < DEMO_SCRIPT.length; s++) {
+      const step = DEMO_SCRIPT[s];
       if (!alive()) break;
       setCaption(step.caption);
 
       const p = commonPrefix(buffer, step.code);
       if (step.code.length > p) {
-        await sleep(thinkPause("before-code"));
+        await wait(s === 0 ? 200 : thinkPause("before-code"));
         const delays = codeKeystrokes(step.code);
         for (let i = p; i < step.code.length; i++) {
           if (!alive()) break;
           setCode(step.code.slice(0, i + 1));
-          await sleep(delays[i] ?? 38);
+          await sleep(Math.min(delays[i] ?? 38, 220));
         }
       }
       buffer = step.code;
       if (!alive()) break;
 
-      await sleep(thinkPause("before-message"));
+      await wait(s === 0 ? 220 : thinkPause("before-message"));
+      inputRef.current?.focus();
       const md = messageKeystrokes(step.say);
       for (let i = 0; i < step.say.length; i++) {
         if (!alive()) break;
         setInput(step.say.slice(0, i + 1));
-        await sleep(md[i] ?? 55);
+        await sleep(Math.min(md[i] ?? 55, 150));
       }
       if (!alive()) break;
-      await sleep(260);
+      await sleep(240);
       await send(step.say);
-      await sleep(thinkPause("review"));
+      await wait(thinkPause("review"));
     }
     setCaption(null);
     setPlaying(false);
@@ -263,14 +280,15 @@ function TutorView() {
             </div>
             <div className="mt-5 flex items-end gap-3 border-t border-[var(--hairline)] pt-4">
               <textarea
+                ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                disabled={locked}
+                readOnly={locked}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void send();
                 }}
                 placeholder={locked ? "Walkthrough playing…" : "Describe what you tried…  ⌘↵"}
-                className="field min-h-[44px] resize-none disabled:opacity-50"
+                className="field min-h-[44px] resize-none"
               />
               <button className="btn" onClick={() => void send()} disabled={busy || locked || !input.trim()}>
                 Send
