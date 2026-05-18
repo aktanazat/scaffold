@@ -68,7 +68,7 @@ function ClassView() {
   return (
     <div className="min-h-screen">
       <Nav active="class" />
-      <main className="mx-auto w-full max-w-[920px] px-6 pt-32 pb-24">
+      <main className="page mx-auto w-full max-w-[920px] px-6 pt-32 pb-24">
         <p className="micro mb-6">Teacher dashboard · {title}</p>
         <h1 className="serif text-[clamp(2rem,4.6vw,3.1rem)] leading-[1.08] max-w-[20ch]">
           {weakest && weakest.shaky > 0 ? (

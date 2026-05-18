@@ -40,8 +40,8 @@ export default function TeacherPage() {
     <div className="min-h-screen">
       <Nav active="compose" />
 
-      <main className="mx-auto w-full max-w-[920px] px-6">
-        <section className="pt-32 pb-20 fade-up">
+      <main className="page mx-auto w-full max-w-[920px] px-6">
+        <section className="pt-32 pb-20">
           <p className="micro mb-7">Scaffold · AI tutoring for CS classrooms</p>
           <h1 className="serif text-[clamp(2.6rem,6vw,4.4rem)] leading-[1.04] max-w-[16ch]">
             The AI tutor that refuses to do the homework.

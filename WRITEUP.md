@@ -1,9 +1,11 @@
 Scaffold — CodeHS 2026 Summer Intern Challenge
 
 Links
-- Live demo: deploy in one click (no config), https://vercel.com/new/clone?repository-url=https://github.com/aktanazat/scaffold then open /tutor?demo=1
+- Live: https://scaffold-mocha.vercel.app
+- Student tutor demo: https://scaffold-mocha.vercel.app/tutor?demo=1
+- Teacher dashboard: https://scaffold-mocha.vercel.app/class
 - Source: https://github.com/aktanazat/scaffold
-- Walkthrough video: [Loom link — to add]
+- Walkthrough video: [Loom link to add]
 
 What it is
 Scaffold is an AI coding tutor a CS teacher deploys for a single assignment in under a minute. The teacher pastes the problem and a reference solution and gets a shareable link. Students open the link, write code, and talk to a tutor that gives one Socratic nudge at a time and never writes the solution. The teacher gets the part that is usually invisible: a live read of where each student got stuck, classified as syntax, logic, a missing concept, or an attempt to extract the answer.
@@ -21,8 +23,14 @@ Key decisions
 - A demo engine, not just a model. The app runs on Claude when a key is set, and on a deterministic Socratic engine when it is not. A reviewer can always test the link even with zero configuration, and the guardrail logic is provable without a model in the loop. I chose this after the public demo could not assume a server-side key.
 - Coordination. I scoped a frozen type contract first, then ran the backend and the frontend in parallel as separate agents against it so neither blocked the other. The backend was meant to go to Codex; its auth was dead, so I rerouted to a second agent without losing the parallelism. That recovery is the point: the plan survived a broken tool because the contract, not the tool, was the source of truth.
 
+Design
+The interface is built to one reference, augen.pro: a luminous bone canvas, a single editorial serif for display, a frosted pill nav, and hairline structure instead of boxed cards. The rule was that nothing should read as a generated hackathon dashboard. No accent-border cards, no indigo, no gradient chrome, no status dots. The dashboard headline computes the class's weakest concept and states it in plain language, so a teacher reads the conclusion before the chart.
+
+The teacher dashboard
+The class view aggregates a seeded cohort plus any live sessions into concept-mastery bars and a roster showing where each student is stuck and how often they tried to extract the answer. It is the part teaching has been blind to, made legible in one screen.
+
 What I would do next
-Persist sessions so the misconception panel becomes a real class dashboard across students and time. Add a teacher view that aggregates the whole class's struggle map for one assignment, which is the signal a department head would pay for.
+Replace the per-browser session store with real persistence so the dashboard spans a whole class across devices and time, and add per-assignment trend lines a department could act on.
 
 Time
-About one hour, as suggested.
+A focused build, then two rounds of iteration on the dashboard and the visual design.
