@@ -3,6 +3,7 @@ Scaffold — CodeHS 2026 Summer Intern Challenge
 Links
 - Live: https://scaffold-mocha.vercel.app
 - Student tutor demo: https://scaffold-mocha.vercel.app/tutor?demo=1
+- Watch it solve itself: https://scaffold-mocha.vercel.app/tutor?demo=1&auto=1
 - Teacher dashboard: https://scaffold-mocha.vercel.app/class
 - Source: https://github.com/aktanazat/scaffold
 - Walkthrough video: [Loom link to add]
@@ -25,6 +26,9 @@ Key decisions
 
 Design
 The interface is built to one reference, augen.pro: a luminous bone canvas, a single editorial serif for display, a frosted pill nav, and hairline structure instead of boxed cards. The rule was that nothing should read as a generated hackathon dashboard. No accent-border cards, no indigo, no gradient chrome, no status dots. The dashboard headline computes the class's weakest concept and states it in plain language, so a teacher reads the conclusion before the chart.
+
+The walkthrough
+A judge should not have to type to understand the product. The demo plays itself: a student opens FizzBuzz, asks for the answer, gets refused, writes a loop, reaches for modulo, gets the condition order wrong, then fixes it. The code is typed into a real syntax-highlighted editor at a human cadence with hesitation and think-pauses, the message is typed live, and the tutor responds for real. The struggle timeline and the dashboard fill from the same run. It reads like watching over a student's shoulder, because the pacing model was built to.
 
 The teacher dashboard
 The class view aggregates a seeded cohort plus any live sessions into concept-mastery bars and a roster showing where each student is stuck and how often they tried to extract the answer. It is the part teaching has been blind to, made legible in one screen.
