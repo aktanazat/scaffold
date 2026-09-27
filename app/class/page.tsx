@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { StruggleKind } from "@/lib/types";
-import { decodeAssignment } from "@/lib/share";
+import { decodeShareToken } from "@/lib/share";
 import { DEMO_STUDENT } from "@/lib/demoStudent";
 import { seededCohort } from "@/lib/cohort";
 import { sessionsFor, type StoredSession } from "@/lib/sessionStore";
@@ -34,7 +34,7 @@ function ClassView() {
 
   const { title, concepts } = useMemo(() => {
     if (token) {
-      const a = decodeAssignment(token);
+      const a = decodeShareToken(token);
       if (a) return { title: a.title, concepts: a.concepts };
     }
     return { title: DEMO_STUDENT.title, concepts: DEMO_STUDENT.concepts };

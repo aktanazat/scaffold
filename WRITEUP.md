@@ -17,6 +17,6 @@ Who it is for
 CS teachers and TAs who cannot be in thirty places at once during a lab.
 
 How it holds up
-Stateless: the assignment encodes into the link, no database, and the reference solution never reaches the student's browser. It ships with a deterministic engine so the public link works with zero setup, and the demo plays itself at a human typing cadence so a reviewer sees the full loop without touching a key.
+Stateless: the assignment encodes into the link, no database, and the reference solution rides along only encrypted with a key that stays on the server, so a student who decodes the link cannot read it. It ships with a deterministic engine so the public link works with zero setup, and the demo plays itself at a human typing cadence so a reviewer sees the full loop without touching a key.
 
 Built in a focused session, with subagents handling the backend and the typing model in parallel. The walkthrough video above shows it end to end.

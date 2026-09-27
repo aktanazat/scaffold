@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { Language } from "@/lib/types";
-import { encodeAssignment } from "@/lib/share";
+import type { Assignment, Language, ShareResponse } from "@/lib/types";
 import { Nav } from "@/components/Nav";
 
 const LANGS: { id: Language; label: string }[] = [
@@ -23,18 +22,45 @@ export default function TeacherPage() {
 
   const ready = Boolean(title.trim() && prompt.trim() && reference.trim());
 
-  const link = useMemo(() => {
-    if (!ready) return "";
-    const token = encodeAssignment({
-      title: title.trim(),
-      language,
-      prompt: prompt.trim(),
-      reference: reference.trim(),
-      concepts: concepts.split(",").map((c) => c.trim()).filter(Boolean),
-    });
-    const origin = typeof window === "undefined" ? "" : window.location.origin;
-    return `${origin}/tutor?a=${token}`;
-  }, [ready, title, language, prompt, reference, concepts]);
+  const body = useMemo(
+    () =>
+      JSON.stringify({
+        title: title.trim(),
+        language,
+        prompt: prompt.trim(),
+        reference: reference.trim(),
+        concepts: concepts.split(",").map((c) => c.trim()).filter(Boolean),
+      } satisfies Assignment),
+    [title, language, prompt, reference, concepts],
+  );
+
+  // The server seals the reference into the link, so the link is built there. `share.body`
+  // records which inputs it was built from; a link for older inputs is never shown.
+  const [share, setShare] = useState<{ body: string; link: string; sealed: boolean } | null>(null);
+  useEffect(() => {
+    if (!ready) return;
+    const ctrl = new AbortController();
+    const id = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/share", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body,
+          signal: ctrl.signal,
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as ShareResponse;
+        setShare({ body, link: `${window.location.origin}/tutor?a=${data.token}`, sealed: data.referenceSealed });
+      } catch {
+        // aborted by a newer edit, or offline: the link stays in its building state
+      }
+    }, 250);
+    return () => {
+      clearTimeout(id);
+      ctrl.abort();
+    };
+  }, [ready, body]);
+  const link = share?.body === body ? share.link : "";
 
   return (
     <div className="min-h-screen">
@@ -108,7 +134,7 @@ export default function TeacherPage() {
             <label className="block">
               <span className="micro">Reference solution</span>
               <span className="ml-2 text-[11px] text-[var(--faint)]">
-                server-side only · never sent to the student
+                sealed in the link · only the server can read it
               </span>
               <textarea
                 className="code-field mt-3 min-h-[120px] resize-y"
@@ -133,11 +159,18 @@ export default function TeacherPage() {
                 <div className="fade-up">
                   <span className="micro">Shareable student link</span>
                   <div className="mono mt-3 break-all border-b border-[var(--hairline)] pb-3 text-[12.5px] text-[var(--muted)]">
-                    {link}
+                    {link || "Building link…"}
                   </div>
+                  {link && !share?.sealed && (
+                    <p className="mt-3 text-[12px] text-[var(--faint)]">
+                      This server has no sealing key, so the link leaves the reference out and the
+                      tutor works from the problem alone.
+                    </p>
+                  )}
                   <div className="mt-5 flex items-center gap-3">
                     <button
                       className="btn"
+                      disabled={!link}
                       onClick={() => {
                         navigator.clipboard.writeText(link);
                         setCopied(true);
@@ -146,9 +179,11 @@ export default function TeacherPage() {
                     >
                       {copied ? "Copied" : "Copy link"}
                     </button>
-                    <a className="btn-quiet" href={link} target="_blank" rel="noreferrer">
-                      Open as student
-                    </a>
+                    {link && (
+                      <a className="btn-quiet" href={link} target="_blank" rel="noreferrer">
+                        Open as student
+                      </a>
+                    )}
                   </div>
                 </div>
               ) : (

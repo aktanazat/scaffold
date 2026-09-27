@@ -19,18 +19,22 @@ It ships with a deterministic demo engine, so the public link works with zero co
 ```bash
 npm install
 npm run dev          # http://localhost:3000
+npm test             # share-link tests, Node 23.6 or newer
 ```
 
 Optional live mode: set `ANTHROPIC_API_KEY` and the tutor runs on `claude-sonnet-4-6`. With no key it falls back to the deterministic demo engine, so the public link never breaks for a reviewer.
 
+For the live tutor to check work against the teacher's reference, also set `SCAFFOLD_SEAL_KEY` to a long random string (`openssl rand -base64 32`). Without it, share links leave the reference out.
+
 ## How it works
 
-- **Stateless.** The assignment (including the reference solution) is base64-encoded into the share link. No database, nothing to host, no accounts. The reference is stripped before anything reaches the student's browser; the tutor reasons against it server-side only.
+- **Stateless.** The share link carries the problem the student sees. The reference solution goes in only as AES-GCM ciphertext sealed with `SCAFFOLD_SEAL_KEY`, which never leaves the server, so a student who decodes the link cannot read it. The tutor route opens it server-side. No database, no accounts.
 - **Guardrail.** The system prompt and the demo engine both enforce one rule hard: never output the solution, never reveal the reference, never paste more than two lines of code. If a student tries to extract the answer, the tutor redirects and the turn is flagged.
 - **Signal back to the teacher.** Every turn is classified into a struggle kind (`asked_for_answer`, `syntax`, `logic`, `concept_gap`, `stuck_no_attempt`, `progressing`) and mapped to a target concept, rendered as a live misconception panel.
+- **Class page limit.** `/class` reads sessions saved in the browser it runs in, plus a seeded sample class. It does not yet collect sessions from students' own browsers.
 
 ## Stack
 
-Next.js 15 (App Router) · TypeScript · Tailwind v4 · Anthropic SDK · deployed on Vercel.
+Next.js 16 (App Router) · TypeScript · Tailwind v4 · Anthropic SDK · deployed on Vercel.
 
 Built for the CodeHS 2026 Summer Intern Challenge.

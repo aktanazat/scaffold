@@ -3,10 +3,14 @@ import type { Assignment, TutorRequest, TutorResponse } from "@/lib/types";
 import { DEMO_ASSIGNMENT } from "@/lib/demoAssignment";
 import { demoTutorTurn } from "@/lib/demoEngine";
 import { buildSystemPrompt, buildUserPrompt, parseTutorTurn } from "@/lib/socratic";
+import { toStudentAssignment } from "@/lib/share";
+import { openReference } from "@/lib/seal";
 
 function resolveAssignment(req: TutorRequest): Assignment {
   if (req.assignment.title === DEMO_ASSIGNMENT.title) return DEMO_ASSIGNMENT;
-  return { ...req.assignment, reference: "" };
+  const secret = process.env.SCAFFOLD_SEAL_KEY;
+  const reference = secret && req.sealedReference ? openReference(req.sealedReference, secret) : null;
+  return { ...toStudentAssignment(req.assignment), reference: reference ?? "" };
 }
 
 export async function POST(req: Request): Promise<Response> {

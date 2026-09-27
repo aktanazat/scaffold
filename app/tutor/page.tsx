@@ -3,13 +3,8 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import type {
-  ChatMessage,
-  StruggleKind,
-  StudentAssignment,
-  TutorResponse,
-} from "@/lib/types";
-import { decodeAssignment, toStudentAssignment } from "@/lib/share";
+import type { ChatMessage, SharePayload, StruggleKind, TutorResponse } from "@/lib/types";
+import { decodeShareToken, toStudentAssignment } from "@/lib/share";
 import { DEMO_STUDENT } from "@/lib/demoStudent";
 import { DEMO_SCRIPT } from "@/lib/demoScript";
 import { newSessionId, recordTurn } from "@/lib/sessionStore";
@@ -45,13 +40,12 @@ function TutorView() {
   const sp = useSearchParams();
   const isDemo = sp.get("demo") === "1";
 
-  const assignment: StudentAssignment | null = useMemo(() => {
+  const shared: SharePayload | null = useMemo(() => {
     if (isDemo) return DEMO_STUDENT;
     const token = sp.get("a");
-    if (!token) return null;
-    const full = decodeAssignment(token);
-    return full ? toStudentAssignment(full) : null;
+    return token ? decodeShareToken(token) : null;
   }, [isDemo, sp]);
+  const assignment = useMemo(() => (shared ? toStudentAssignment(shared) : null), [shared]);
 
   const session = useMemo(
     () => ({ id: newSessionId(), student: "You", title: assignment?.title ?? "" }),
@@ -99,7 +93,12 @@ function TutorView() {
       const res = await fetch("/api/tutor", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ assignment, code, messages: convo }),
+        body: JSON.stringify({
+          assignment,
+          sealedReference: shared?.sealedReference,
+          code,
+          messages: convo,
+        }),
       });
       const data = (await res.json()) as TutorResponse;
       setMode(data.mode);

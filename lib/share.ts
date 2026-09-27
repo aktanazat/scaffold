@@ -1,4 +1,4 @@
-import type { Assignment, StudentAssignment } from "./types";
+import type { SharePayload, StudentAssignment } from "./types";
 
 function b64encode(s: string): string {
   if (typeof window === "undefined") return Buffer.from(s, "utf-8").toString("base64url");
@@ -11,23 +11,29 @@ function b64decode(s: string): string {
   return decodeURIComponent(escape(atob(norm)));
 }
 
-// Teacher link carries the full assignment (incl. reference, used server-side only).
-export function encodeAssignment(a: Assignment): string {
-  return b64encode(JSON.stringify(a));
+// Picks only the fields a student may see, so an extra field (such as `reference` in a link
+// made before sealing) is never carried forward.
+export function toStudentAssignment(a: StudentAssignment): StudentAssignment {
+  return {
+    title: a.title,
+    language: a.language,
+    prompt: a.prompt,
+    concepts: Array.isArray(a.concepts) ? a.concepts : [],
+  };
 }
 
-export function decodeAssignment(token: string): Assignment | null {
+// The share link token. Built only by POST /api/share, which seals the reference.
+export function encodeShareToken(p: SharePayload): string {
+  return b64encode(JSON.stringify(p));
+}
+
+export function decodeShareToken(token: string): SharePayload | null {
   try {
-    const a = JSON.parse(b64decode(token)) as Assignment;
-    if (!a.title || !a.prompt || !a.language) return null;
-    return a;
+    const p = JSON.parse(b64decode(token)) as SharePayload;
+    if (!p.title || !p.prompt || !p.language) return null;
+    const sealedReference = typeof p.sealedReference === "string" ? p.sealedReference : undefined;
+    return { ...toStudentAssignment(p), sealedReference };
   } catch {
     return null;
   }
-}
-
-export function toStudentAssignment(a: Assignment): StudentAssignment {
-  const { reference, ...rest } = a;
-  void reference;
-  return rest;
 }
